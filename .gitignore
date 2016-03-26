@@ -22,3 +22,10 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+*~
+cscope.*
+
+vendor
+
+conn/access.key
