@@ -11,15 +11,19 @@ import (
 	"github.com/nu7hatch/gouuid"
 )
 
+type Dict map[string]interface{}
+
+type List []interface{}
+
 type HTTPConnector interface {
 	NextRequestID() string
 	
 	BuildRequest(
 		method string,
 		path string,
-		params map[string]interface{},
+		params Dict,
 		authpath string,
-		headers map[string]string,
+		headers Dict,
 		host string,
 		data string,
 	) (*http.Request, error)
@@ -27,9 +31,9 @@ type HTTPConnector interface {
 	Send(
 		method string,
 		path string,
-		params map[string]interface{},
+		params Dict,
 		authpath string,
-		headers map[string]string,
+		headers Dict,
 		host string,
 		data string,
 	) (*http.Response, error)
@@ -56,30 +60,28 @@ func (c HTTPConnection) NextRequestID() string {
 	return strings.Replace(u.String(), "-", "", -1)
 }
 
-func (c HTTPConnection) wrapInnerMap(prefix string, m interface{}, p map[string]string) error {
-	if m, ok := m.(map[string]string); ok {
-		for k, v := range m {
-			p[fmt.Sprintf("%s.%s", prefix, k)] = v
-		}
-		return nil
-	}
+func (c HTTPConnection) wrapInnerMap(prefix string, dict interface{}, params *Dict) error {
+	for k, v := range dict.(Dict){
+		newkey := fmt.Sprintf("%s.%s", prefix, k)
 
-	// Jsonize non-string.
-	if m, ok := m.(map[string]interface{}); ok {
-		for vk, vv := range m {
-			b, err := json.Marshal(vv)
+		switch v := v.(type) {
+		case string:
+			(*params)[newkey] = v
+
+		default:
+			bs, err := json.Marshal(v)
 			if err != nil {
 				return err
 			}
-			p[fmt.Sprintf("%s.%s", prefix, vk)] = string(b)
+			(*params)[newkey] = string(bs)
 		}
 	}
 
 	return nil
 }
 
-func (c HTTPConnection) WrapParams(p map[string]interface{}) (map[string]string, error) {
-	params := make(map[string]string)
+func (c HTTPConnection) WrapParams(p Dict) (Dict, error) {
+	params := make(Dict)
 
 	for key, val := range p {
 		if val == nil {
@@ -106,7 +108,9 @@ func (c HTTPConnection) WrapParams(p map[string]interface{}) (map[string]string,
 				}
 
 				prefix := fmt.Sprintf("%s.%d", key, i+1)
-				c.wrapInnerMap(prefix, v, params)
+				if err := c.wrapInnerMap(prefix, v, &params); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}

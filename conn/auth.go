@@ -13,19 +13,23 @@ import (
 	"github.com/anrs/qingcloud-sdk-go/utils"
 )
 
-func BuildRawQuery(params map[string]string) string {
+func BuildRawQuery(params Dict) (string, error) {
 	v := url.Values{}
 
 	for k, p := range params {
+		p, ok := p.(string)
+		if !ok {
+			return "", errors.New(fmt.Sprintf("%s value is not a string", k))
+		}
 		v.Add(k, p)
 	}
 
 	q := v.Encode()
-	return strings.Replace(q, "+", "%20", -1)
+	return strings.Replace(q, "+", "%20", -1), nil
 }
 
 type Authable interface {
-	Authorize(s *map[string]string, path string) error
+	Authorize(s *Dict, path string) error
 }
 
 type Auth struct {
@@ -45,10 +49,13 @@ func NewQuerySignatureAuth(access string, secret string) *QuerySignatureAuth {
 	}
 }
 
-func (a *QuerySignatureAuth) sign(params map[string]string, path string) (string, error) {
-	query := BuildRawQuery(params)
-	raw := fmt.Sprintf("GET\n%s\n%s", path, query)
+func (a *QuerySignatureAuth) sign(params Dict, path string) (string, error) {
+	query, err := BuildRawQuery(params)
+	if err != nil {
+		return "", err
+	}
 
+	raw := fmt.Sprintf("GET\n%s\n%s", path, query)
 	hm := hmac.New(sha256.New, []byte(a.SecretAccessKey))
 	n, err := hm.Write([]byte(raw))
 	if err != nil {
@@ -62,7 +69,7 @@ func (a *QuerySignatureAuth) sign(params map[string]string, path string) (string
 	return encoded, nil
 }
 
-func (a *QuerySignatureAuth) Authorize(params *map[string]string, path string) error {
+func (a *QuerySignatureAuth) Authorize(params *Dict, path string) error {
 	(*params)["access_key_id"] = a.AccessKeyID
 	(*params)["signature_version"] = strconv.Itoa(a.SignatureVersion)
 	(*params)["signature_method"] = "HmacSHA256"

@@ -9,17 +9,17 @@ func TestWrapParams(t *testing.T) {
 	req_id := "8608eb56894f425b833251e2fd9955e3"
 
 	tests := []struct {
-		in  map[string]interface{}
-		out map[string]string
+		in  Dict
+		out Dict
 	}{
 		{
-			map[string]interface{}{
+			Dict{
 				"action": "DescribeZones",
 				"zone":   "pek1",
 				"req_id": req_id,
 				"ver":    1,
 			},
-			map[string]string{
+			Dict{
 				"action": "DescribeZones",
 				"zone":   "pek1",
 				"req_id": req_id,
@@ -27,14 +27,14 @@ func TestWrapParams(t *testing.T) {
 			},
 		},
 		{
-			map[string]interface{}{
+			Dict{
 				"action": "DescribeInstances",
 				"zone":   "pek1",
 				"req_id": req_id,
 				"ver":    1,
 				"status": []string{"running", "stopped"},
 			},
-			map[string]string{
+			Dict{
 				"action":   "DescribeInstances",
 				"zone":     "pek1",
 				"req_id":   req_id,
@@ -44,17 +44,17 @@ func TestWrapParams(t *testing.T) {
 			},
 		},
 		{
-			map[string]interface{}{
+			Dict{
 				"action": "CreateSomething",
 				"zone":   "pek1",
 				"req_id": req_id,
 				"ver":    1,
 				"ip": []interface{}{
-					map[string]string{"master": "192.168.100.100"},
-					map[string]string{"slave": "192.168.100.200"},
+					Dict{"master": "192.168.100.100"},
+					Dict{"slave": "192.168.100.200"},
 				},
 			},
-			map[string]string{
+			Dict{
 				"action":      "CreateSomething",
 				"zone":        "pek1",
 				"req_id":      req_id,
@@ -64,17 +64,17 @@ func TestWrapParams(t *testing.T) {
 			},
 		},
 		{
-			map[string]interface{}{
+			Dict{
 				"action": "UpdateSomething",
 				"zone":   "pek1",
 				"req_id": req_id,
 				"ver":    1,
 				"ip": []interface{}{
-					map[string]interface{}{"master": []string{"192.168.100.100"}},
-					map[string]interface{}{"slave": []string{"192.168.100.200"}},
+					Dict{"master": []string{"192.168.100.100"}},
+					Dict{"slave": []string{"192.168.100.200"}},
 				},
 			},
-			map[string]string{
+			Dict{
 				"action":      "UpdateSomething",
 				"zone":        "pek1",
 				"req_id":      req_id,
@@ -84,21 +84,21 @@ func TestWrapParams(t *testing.T) {
 			},
 		},
 		{
-			map[string]interface{}{
+			Dict{
 				"action": "UpdateSomething",
 				"zone":   "pek1",
 				"req_id": req_id,
 				"ver":    1,
 				"ip": []interface{}{
-					map[string]interface{}{
-						"master": map[string]string{"ip": "192.168.100.100"},
+					Dict{
+						"master": Dict{"ip": "192.168.100.100"},
 					},
-					map[string]interface{}{
-						"slave": map[string]string{"ip": "192.168.100.200"},
+					Dict{
+						"slave": Dict{"ip": "192.168.100.200"},
 					},
 				},
 			},
-			map[string]string{
+			Dict{
 				"action":      "UpdateSomething",
 				"zone":        "pek1",
 				"req_id":      req_id,

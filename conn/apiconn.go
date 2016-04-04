@@ -44,9 +44,9 @@ func NewAPIConnector(c APIConnection) HTTPConnector {
 func (c APIConnection) BuildRequest(
 	method string,
 	path string,
-	params map[string]interface{},
+	params Dict,
 	authpath string,
-	headers map[string]string,
+	headers Dict,
 	host string,
 	data string,
 ) (*http.Request, error) {
@@ -63,11 +63,16 @@ func (c APIConnection) BuildRequest(
 		return nil, err
 	}
 
+	query, err := BuildRawQuery(wrappedParams)
+	if err != nil {
+		return nil, err
+	}
+
 	u := &url.URL{
 		Scheme:   c.Protocol,
 		Host:     host,
 		Path:     path,
-		RawQuery: BuildRawQuery(wrappedParams),
+		RawQuery: query,
 	}
 
 	method = strings.Trim(strings.ToUpper(method), " ")
@@ -77,6 +82,10 @@ func (c APIConnection) BuildRequest(
 	}
 
 	for k, v := range headers {
+		v, ok := v.(string)
+		if !ok {
+			return nil, errors.New(fmt.Sprintf("%s value is not a string", k))
+		}
 		req.Header.Set(k, v)
 	}
 
@@ -92,10 +101,10 @@ func (c APIConnection) BuildRequest(
 
 func (c APIConnection) SendRequest(
 	action string,
-	params map[string]interface{},
+	params Dict,
 	path string,
 	method string,
-	headers map[string]string,
+	headers Dict,
 	authpath string,
 	data string,
 ) (interface{}, error) {
@@ -143,9 +152,9 @@ func (c APIConnection) SendRequest(
 func (c APIConnection) Send(
 	method string,
 	path string,
-	params map[string]interface{},
+	params Dict,
 	authpath string,
-	headers map[string]string,
+	headers Dict,
 	host string,
 	data string,
 ) (*http.Response, error) {
@@ -168,21 +177,21 @@ func (c APIConnection) Send(
 
 type ReqArg struct {
 	action   string
-	params   map[string]interface{}
+	params   Dict
 	path     string
 	method   string
-	headers  map[string]string
+	headers  Dict
 	authpath string
 	data     string
 }
 
 func (c APIConnection) preSendRequest(arg ReqArg) (interface{}, error) {
 	if arg.params == nil {
-		arg.params = make(map[string]interface{})
+		arg.params = make(Dict)
 	}
 
 	if arg.headers == nil {
-		arg.headers = make(map[string]string)
+		arg.headers = make(Dict)
 	}
 
 	return c.SendRequest(
@@ -198,5 +207,31 @@ func (c APIConnection) preSendRequest(arg ReqArg) (interface{}, error) {
 
 func (c APIConnection) DescribeZones() (interface{}, error) {
 	arg := ReqArg{action: "DescribeZones"}
+	return c.preSendRequest(arg)
+}
+
+func (c APIConnection) DescribeJobs(params Dict) (interface{}, error) {
+	cond := Condition{
+		Integers: Keys{"offset", "limit"},
+		Lists:    Keys{"jobs"},
+	}
+	if err := cond.Check(&params); err != nil {
+		return nil, err
+	}
+
+	arg := ReqArg{action: "DescribeJobs", params: params}
+	return c.preSendRequest(arg)
+}
+
+func (c APIConnection) DescribeImages(params Dict) (interface{}, error) {
+	cond := Condition{
+		Integers: Keys{"offset", "limit", "verbose"},
+		Lists:    Keys{"images"},
+	}
+	if err := cond.Check(&params); err != nil {
+		return nil, err
+	}
+
+	arg := ReqArg{action: "DescribeImages", params: params}
 	return c.preSendRequest(arg)
 }

@@ -3,11 +3,6 @@ package conn
 import (
 	"reflect"
 	"testing"
-
-	/*
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"*/
 )
 
 var accessKeyID string = "QYACCESSKEYIDEXAMPLE"
@@ -16,11 +11,11 @@ var signature string = "32bseYy39DOlatuewpeuW5vpmW51sD1A%2FJdGynqSpP8%3D"
 
 func TestBuildQuery(t *testing.T) {
 	tests := []struct {
-		in  map[string]string
+		in  Dict
 		out string
 	}{
 		{
-			map[string]string{
+			Dict{
 				"count":             "1",
 				"vxnets.1":          "vxnet-0",
 				"zone":              "pek1",
@@ -41,7 +36,10 @@ func TestBuildQuery(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		q := BuildRawQuery(test.in)
+		q, err := BuildRawQuery(test.in)
+		if err != nil {
+			t.Error(err)
+		}
 		if q != test.out {
 			t.Errorf("query %v != %v", q, test.out)
 		}
@@ -54,11 +52,11 @@ type UtilsInterface interface {
 
 func TestAuthorize(t *testing.T) {
 	tests := []struct{
-		in  map[string]string
-		out map[string]string
+		in  Dict
+		out Dict
 	}{
 		{
-			map[string]string{
+			Dict{
 				"count":             "1",
 				"vxnets.1":          "vxnet-0",
 				"zone":              "pek1",
@@ -74,7 +72,7 @@ func TestAuthorize(t *testing.T) {
 				"action":            "RunInstances",
 				"time_stamp":        "2013-08-27T14:30:10Z",
 			},
-			map[string]string{
+			Dict{
 				"count":             "1",
 				"vxnets.1":          "vxnet-0",
 				"zone":              "pek1",
@@ -109,13 +107,13 @@ func TestAuthorize(t *testing.T) {
 
 func TestAuthorizeNewUTCTimestamp(t *testing.T) {
 	a := NewQuerySignatureAuth("", "")
-	in := map[string]string{}
+	in := Dict{}
 
 	if err := a.Authorize(&in, "/iaas/"); err != nil {
 		t.Error(err)
 	}
 
-	if len(in["time_stamp"]) != 20 {
+	if len(in["time_stamp"].(string)) != 20 {
 		t.Errorf("len(%v) != 20", in["time_stamp"])
 	}
 }
