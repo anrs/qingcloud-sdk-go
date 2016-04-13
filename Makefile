@@ -4,7 +4,7 @@ ifeq "$(GOPATH)" ""
 endif
 
 dep:
-	go get -u github.com/nu7hatch/gouuidxs
+	go get -u github.com/nu7hatch/gouuid
 
 test:
 	go test -v ./...
