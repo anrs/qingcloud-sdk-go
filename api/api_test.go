@@ -1,15 +1,17 @@
-package conn
+package api
 
 import (
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	"github.com/anrs/qingcloud-sdk-go/conn"
 )
 
 var access string
 var secret string
 
-func newConnection(t *testing.T) APIConnection {
+func NewTestIaaSConnection(t *testing.T) conn.IaaSConnection {
 	if access == "" || secret == "" {
 		dat, err := ioutil.ReadFile("access.key")
 		if err != nil {
@@ -28,8 +30,8 @@ func newConnection(t *testing.T) APIConnection {
 		}
 	}
 
-	c := NewAPIConnector(APIConnection{
-		HTTPConnection{
+	c := conn.NewIaaSConnection(
+		conn.HTTPConnection{
 			Host:            "api.qingcloud.com",
 			Path:            "/iaas/",
 			Protocol:        "http",
@@ -37,18 +39,19 @@ func newConnection(t *testing.T) APIConnection {
 			SecretAccessKey: secret,
 		},
 		"pek2",
-	})
+	)
 
-	v, ok := c.(APIConnection)
-	if !ok {
-		t.Fatalf("c is not an APIConnection")
-	}
-
-	return v
+	return c
 }
 
-func check(t *testing.T, resp interface{}, action string) {
-	if resp, ok := resp.(Dict); ok {
+func CheckIaaSAPIResponse(t *testing.T, resp interface{}, action string) {
+	if resp, ok := resp.(map[string]interface{}); ok {
+		if retcode, ok := resp["ret_code"]; !ok {
+			t.Fatalf("action %s response has no ret_code", action)
+		} else if retcode.(float64) != 0 {
+			t.Fatalf("action %s ret_code %v != 0", action, retcode)
+		}
+
 		if len(resp) < 2 {
 			t.Fatalf("len of %v is less than 2", resp)
 		}
@@ -58,26 +61,10 @@ func check(t *testing.T, resp interface{}, action string) {
 		} else if a != action {
 			t.Fatalf("%s != %s", a, action)
 		}
+	} else {
+		t.Fatal("response %v is not a map", resp)
 	}
 }
 
-func TestDescribeZones(t *testing.T) {
-	c := newConnection(t)
-	zones, err := c.DescribeZones()
-	if err != nil {
-		t.Error(err)
-	}
-	check(t, zones, "DescribeZonesResponse")
-}
-
-func TestDescribeJobs(t *testing.T) {
-	c := newConnection(t)
-	args := Dict{
-		"limit": 10, "offset": 0,
-	}
-	jobs, err := c.DescribeJobs(args)
-	if err != nil {
-		t.Error(err)
-	}
-	check(t, jobs, "DescribeJobsResponse")
+func TestAPI(t *testing.T) {
 }

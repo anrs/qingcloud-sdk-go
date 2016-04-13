@@ -1,16 +1,13 @@
 package conn
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"crypto/hmac"
-	"crypto/sha256"
 	"net/url"
-	"strconv"
 	"strings"
-
-	"github.com/anrs/qingcloud-sdk-go/utils"
 )
 
 func BuildRawQuery(params Dict) (string, error) {
@@ -29,7 +26,7 @@ func BuildRawQuery(params Dict) (string, error) {
 }
 
 type Authable interface {
-	Authorize(s *Dict, path string) error
+	Authorize(params *Dict, authpath string, headers *Dict, method string) error
 }
 
 type Auth struct {
@@ -37,25 +34,7 @@ type Auth struct {
 	SecretAccessKey string
 }
 
-type QuerySignatureAuth struct {
-	Auth
-	SignatureVersion int
-	APIVersion       int
-}
-
-func NewQuerySignatureAuth(access string, secret string) *QuerySignatureAuth {
-	return &QuerySignatureAuth{
-		Auth{access, secret}, 1, 1,
-	}
-}
-
-func (a *QuerySignatureAuth) sign(params Dict, path string) (string, error) {
-	query, err := BuildRawQuery(params)
-	if err != nil {
-		return "", err
-	}
-
-	raw := fmt.Sprintf("GET\n%s\n%s", path, query)
+func (a *Auth) Sign(raw string) (string, error) {
 	hm := hmac.New(sha256.New, []byte(a.SecretAccessKey))
 	n, err := hm.Write([]byte(raw))
 	if err != nil {
@@ -67,24 +46,4 @@ func (a *QuerySignatureAuth) sign(params Dict, path string) (string, error) {
 
 	encoded := base64.StdEncoding.EncodeToString(hm.Sum(nil))
 	return encoded, nil
-}
-
-func (a *QuerySignatureAuth) Authorize(params *Dict, path string) error {
-	(*params)["access_key_id"] = a.AccessKeyID
-	(*params)["signature_version"] = strconv.Itoa(a.SignatureVersion)
-	(*params)["signature_method"] = "HmacSHA256"
-	(*params)["version"] = strconv.Itoa(a.APIVersion)
-
-	if _, ok := (*params)["time_stamp"]; !ok {
-		(*params)["time_stamp"] = utils.UTCTimestamp()
-	}
-
-	signature, err := a.sign(*params, path)
-	if err != nil {
-		return err
-	}
-
-	(*params)["signature"] = signature
-
-	return nil
 }

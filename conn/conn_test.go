@@ -5,6 +5,36 @@ import (
 	"testing"
 )
 
+func CheckConnectionFields(
+	t *testing.T,
+	out interface{},
+	exp interface{},
+	extraKeys ...string,
+) {
+	valOut := reflect.ValueOf(out)
+	valExp := reflect.ValueOf(exp)
+
+	httpConnKeys := []string{
+		"AccessKeyID",
+		"SecretAccessKey",
+		"Host",
+		"Port",
+		"Protocol",
+		"Expires",
+		"Timeout",
+		"Debug",
+		"AuthHandler",
+	}
+
+	for _, key := range append(httpConnKeys, extraKeys...) {
+		v1 := valOut.FieldByName(key).Interface()
+		v2 := valExp.FieldByName(key).Interface()
+		if !reflect.DeepEqual(v1, v2) {
+			t.Errorf("key %s: %v != %v", key, v1, v2)
+		}
+	}
+}
+
 func TestWrapParams(t *testing.T) {
 	req_id := "8608eb56894f425b833251e2fd9955e3"
 

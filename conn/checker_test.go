@@ -6,9 +6,9 @@ import (
 )
 
 type Test struct {
-	cond    Condition
-	params  *Dict
-	ok      bool
+	cond   Condition
+	params *Dict
+	ok     bool
 }
 
 func TestCheckRequired(t *testing.T) {

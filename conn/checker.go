@@ -57,7 +57,7 @@ func (c Condition) CheckLists(params *Dict) error {
 		if !ok {
 			continue
 		}
-		
+
 		kind := reflect.ValueOf(v).Kind()
 		if kind != reflect.Slice && kind != reflect.Array {
 			return errors.New(fmt.Sprintf("%s value is not list", k))

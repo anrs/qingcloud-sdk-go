@@ -1,13 +1,30 @@
 package conn
 
 import (
-	"reflect"
 	"testing"
 )
 
-var accessKeyID string = "QYACCESSKEYIDEXAMPLE"
-var secretAccessKey string = "SECRETACCESSKEY"
-var signature string = "32bseYy39DOlatuewpeuW5vpmW51sD1A%2FJdGynqSpP8%3D"
+func TestSign(t *testing.T) {
+	tests := []struct {
+		in  string
+		out string
+	}{
+		{"a", "lhWpXUozYRjENbnNVMXoZEq5VrVzqikmJ0oSgLZnRxM="},
+		{"", "thNnmggU2ex3L5XXeMNfxf8Wl8STcVZTxscSFEKSxa0="},
+	}
+
+	a := NewQueryAuth("", "")
+
+	for _, test := range tests {
+		signature, err := a.Sign(test.in)
+		if err != nil {
+			t.Error(err)
+		}
+		if signature != test.out {
+			t.Errorf("%s != %s", signature, test.out)
+		}
+	}
+}
 
 func TestBuildQuery(t *testing.T) {
 	tests := []struct {
@@ -27,7 +44,7 @@ func TestBuildQuery(t *testing.T) {
 				"login_mode":        "passwd",
 				"login_passwd":      "QingCloud20130712",
 				"version":           "1",
-				"access_key_id":     accessKeyID,
+				"access_key_id":     "QYACCESSKEYIDEXAMPLE",
 				"action":            "RunInstances",
 				"time_stamp":        "2013-08-27T14:30:10Z",
 			},
@@ -46,70 +63,11 @@ func TestBuildQuery(t *testing.T) {
 	}
 }
 
-type UtilsInterface interface {
-	UTCTimestamp() string
-}
-
-func TestAuthorize(t *testing.T) {
-	tests := []struct{
-		in  Dict
-		out Dict
-	}{
-		{
-			Dict{
-				"count":             "1",
-				"vxnets.1":          "vxnet-0",
-				"zone":              "pek1",
-				"instance_type":     "small_b",
-				"signature_version": "1",
-				"signature_method":  "HmacSHA256",
-				"instance_name":     "demo",
-				"image_id":          "centos64x86a",
-				"login_mode":        "passwd",
-				"login_passwd":      "QingCloud20130712",
-				"version":           "1",
-				"access_key_id":     accessKeyID,
-				"action":            "RunInstances",
-				"time_stamp":        "2013-08-27T14:30:10Z",
-			},
-			Dict{
-				"count":             "1",
-				"vxnets.1":          "vxnet-0",
-				"zone":              "pek1",
-				"instance_type":     "small_b",
-				"signature_version": "1",
-				"signature_method":  "HmacSHA256",
-				"instance_name":     "demo",
-				"image_id":          "centos64x86a",
-				"login_mode":        "passwd",
-				"login_passwd":      "QingCloud20130712",
-				"version":           "1",
-				"access_key_id":     accessKeyID,
-				"action":            "RunInstances",
-				"time_stamp":        "2013-08-27T14:30:10Z",
-				"signature":         "32bseYy39DOlatuewpeuW5vpmW51sD1A/JdGynqSpP8=",
-			},
-		},
-	}
-
-	a := NewQuerySignatureAuth(accessKeyID, secretAccessKey)
-
-	for _, test := range tests {
-		if err := a.Authorize(&test.in, "/iaas/"); err != nil {
-			t.Error(err)
-		}
-
-		if !reflect.DeepEqual(test.in, test.out) {
-			t.Errorf("signed %v != %v", test.in, test.out)
-		}
-	}
-}
-
 func TestAuthorizeNewUTCTimestamp(t *testing.T) {
-	a := NewQuerySignatureAuth("", "")
+	a := NewQueryAuth("", "")
 	in := Dict{}
 
-	if err := a.Authorize(&in, "/iaas/"); err != nil {
+	if err := a.Authorize(&in, "/iaas/", nil, "get"); err != nil {
 		t.Error(err)
 	}
 

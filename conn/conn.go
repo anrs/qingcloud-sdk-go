@@ -17,7 +17,9 @@ type List []interface{}
 
 type HTTPConnector interface {
 	NextRequestID() string
-	
+
+	Auth(params *Dict, authpath string, headers *Dict, method string) error
+
 	BuildRequest(
 		method string,
 		path string,
@@ -39,7 +41,9 @@ type HTTPConnector interface {
 	) (*http.Response, error)
 }
 
-type HTTPConnection struct {	
+type HTTPConnection struct {
+	connector HTTPConnector
+
 	AccessKeyID     string
 	SecretAccessKey string
 	Host            string
@@ -52,6 +56,43 @@ type HTTPConnection struct {
 	AuthHandler     Authable
 }
 
+func (c HTTPConnection) Send(
+	method string,
+	path string,
+	params Dict,
+	authpath string,
+	headers Dict,
+	host string,
+	data string,
+) (*http.Response, error) {
+	if strings.Trim(host, " ") == "" {
+		host = c.Host
+	}
+
+	req, err := c.connector.BuildRequest(
+		method, path, params, authpath, headers, host, data,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := send(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (c HTTPConnection) Auth(
+	params *Dict,
+	authpath string,
+	headers *Dict,
+	method string,
+) error {
+	return c.AuthHandler.Authorize(params, authpath, headers, method)
+}
+
 func (c HTTPConnection) NextRequestID() string {
 	u, err := uuid.NewV4()
 	if err != nil {
@@ -61,7 +102,7 @@ func (c HTTPConnection) NextRequestID() string {
 }
 
 func (c HTTPConnection) wrapInnerMap(prefix string, dict interface{}, params *Dict) error {
-	for k, v := range dict.(Dict){
+	for k, v := range dict.(Dict) {
 		newkey := fmt.Sprintf("%s.%s", prefix, k)
 
 		switch v := v.(type) {
@@ -94,12 +135,12 @@ func (c HTTPConnection) WrapParams(p Dict) (Dict, error) {
 
 		case int:
 			params[key] = strconv.Itoa(val)
-			
+
 		case []string:
 			for i, v := range val {
 				params[fmt.Sprintf("%s.%d", key, i+1)] = v
 			}
-			
+
 		case []interface{}:
 			for i, v := range val {
 				if reflect.ValueOf(v).Kind() != reflect.Map {
